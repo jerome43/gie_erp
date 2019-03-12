@@ -1,0 +1,143 @@
+<section class="container-fluid">
+  <div class="row mt-3 mb-1">
+    <h4 class="col-6">
+      Commandes et approvisionnement du {{dashboardDate.toLocaleDateString()}}
+    </h4>
+    <div class="col-2">
+      <mat-form-field class="width75 mx-auto">
+        <input matInput [matDatepicker]="dashboardDatePicker" [(ngModel)]="dashboardDate" placeholder="Date commandes" (dateChange)="changeDate()">
+        <mat-datepicker-toggle matSuffix [for]="dashboardDatePicker"></mat-datepicker-toggle>
+        <mat-datepicker #dashboardDatePicker></mat-datepicker>
+      </mat-form-field>
+    </div>
+    <div class="col-2 text-center">
+      <button mat-stroked-button (click)="openBottomSheet()">notes</button>
+    </div>
+    <div class="col-2 text-center">
+      <button mat-stroked-button color="warn" (click)="clearDashboard()" title="effacer les données et réinitialiser le tableau">vider</button>
+    </div>
+  </div>
+
+  <!-- Tableau des approvisionnements -->
+  <div class="row mb-4">
+    <table class="mat-elevation-z8">
+      <thead>
+      <tr>
+        <th scope="col" class="th-client">Approvisionnements producteurs</th>
+        <ng-container *ngFor="let colProduct of dashboardProducers.colProduct">
+          <ng-container *ngIf="colProduct.display">
+            <th scope="col" class="th-product"><mat-icon color="primary" class="icon-little" (click)="toogleColProduct(colProduct.id)" title="masquer le produit">remove_circle_outline</mat-icon><p class="p-product" title="{{colProduct.name}}">{{colProduct.name}}</p></th>
+          </ng-container>
+        </ng-container>
+      </tr>
+      </thead>
+      <tbody>
+      <ng-container *ngFor="let rowProducer of dashboardProducers.row ; index as iP" >
+        <ng-container *ngIf="rowProducer.display">
+          <tr>
+            <th scope="row" class="th-td-client"><mat-icon color="warn" class="icon-little icon-th-client" (click)="toogleRowProducer(rowProducer.id)" title="masquer le producteur">remove_circle_outline</mat-icon><p class="p-client" title="{{rowProducer.name}}">{{rowProducer.name}}</p></th>
+            <ng-container *ngFor="let colProduct of dashboardProducers.colProduct ; index as iiP">
+              <ng-container *ngIf="colProduct.display">
+                <td class="th-td-client">
+                  <!--input matInput type="number" [(ngModel)]="dashboardProducers.datas.producers[iP].products[iiP].quantity" [attr.data-productId]="colProduct.id" [attr.data-producerId]="rowProducer.id" (change)="change_cell_table($event)"-->
+                  <input matInput type="number" title="{{colProduct.name}} / {{rowProducer.name}}" [(ngModel)]="dashboardProducers.row[iP].quantity[iiP]" [attr.data-productId]="colProduct.id" [attr.data-producerId]="rowProducer.id" (change)="change_cell_table('producers', $event.target.dataset, iP, iiP)">
+                </td>
+              </ng-container>
+            </ng-container>
+          </tr>
+        </ng-container>
+      </ng-container>
+      <tr>
+        <th scope="row" class="bg-grey" title="Total des approvisionnements">Total appros</th>
+        <ng-container *ngFor="let sum of dashboardProducers.sum">
+          <ng-container *ngIf="sum.display">
+            <td class="bg-grey">{{sum.quantity}}</td>
+          </ng-container>
+        </ng-container>
+      </tr>
+      <tr>
+        <th scope="row" title="Total des commandes">Total commandes</th>
+        <ng-container *ngFor="let sum of dashboardClients.sum">
+          <ng-container *ngIf="sum.display">
+            <td>{{sum.quantity}}</td>
+          </ng-container>
+        </ng-container>
+      </tr>
+      </tbody>
+    </table>
+  </div>
+
+<!-- Tableau des commandes -->
+  <div class="row mb-4">
+    <table class="mat-elevation-z8">
+      <thead>
+      <tr>
+        <th scope="col" class="th-client">Commandes clients</th>
+        <ng-container *ngFor="let colProduct of dashboardClients.colProduct">
+          <ng-container *ngIf="colProduct.display">
+            <th scope="col" class="th-product"><mat-icon color="primary" class="icon-little" (click)="toogleColProduct(colProduct.id)" title="masquer le produit">remove_circle_outline</mat-icon><p class="p-product" title="{{colProduct.name}}">{{colProduct.name}}</p></th>
+          </ng-container>
+        </ng-container>
+      </tr>
+      </thead>
+      <tbody>
+      <ng-container *ngFor="let rowClient of dashboardClients.row ; index as iC" >
+        <ng-container *ngIf="rowClient.display">
+          <tr>
+            <th scope="row" class="th-td-client"><mat-icon color="accent" class="icon-little icon-th-client" (click)="toogleRowClient(rowClient.id)" title="masquer le client">remove_circle_outline</mat-icon><p class="p-client" title="{{rowClient.name}}">{{rowClient.name}}</p></th>
+            <ng-container *ngFor="let colProduct of dashboardClients.colProduct ; index as iiC">
+              <ng-container *ngIf="colProduct.display">
+                <td class="th-td-client">
+                  <!--input matInput type="number" [(ngModel)]="dashboardClients.datas.clients[iC].products[iiC].quantity" [attr.data-productId]="colProduct.id" [attr.data-clientId]="rowClient.id" (change)="change_cell_table($event)"-->
+                  <input matInput type="number" title="{{colProduct.name}} / {{rowClient.name}}" [(ngModel)]="dashboardClients.row[iC].quantity[iiC]" [attr.data-productId]="colProduct.id" [attr.data-clientId]="rowClient.id" (change)="change_cell_table('clients', $event.target.dataset, iC, iiC)">
+                </td>
+              </ng-container>
+            </ng-container>
+          </tr>
+        </ng-container>
+      </ng-container>
+      <tr>
+        <th scope="row" class="bg-grey" title="Totaux commandes">Total commandes</th>
+        <ng-container *ngFor="let sum of dashboardClients.sum">
+          <ng-container *ngIf="sum.display">
+            <td class="bg-grey">{{sum.quantity}}</td>
+          </ng-container>
+        </ng-container>
+      </tr>
+      <tr>
+        <th scope="row"  title="Total des approvisionnements">Total appros</th>
+        <ng-container *ngFor="let sum of dashboardProducers.sum">
+          <ng-container *ngIf="sum.display">
+            <td>{{sum.quantity}}</td>
+          </ng-container>
+        </ng-container>
+      </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- boutons des colonnes et lignes masquées -->
+  <div class="row hiddenCell">
+    <div class="col-4">
+      <ng-container *ngFor="let rowProducer of dashboardProducers.row" >
+        <ng-container *ngIf="!rowProducer.display">
+          <button mat-stroked-button color="warn" (click)="toogleRowProducer(rowProducer.id)" title="afficher le producteur {{rowProducer.name}}">{{rowProducer.name}}</button>
+        </ng-container>
+      </ng-container>
+    </div>
+    <div class="col-4">
+      <ng-container *ngFor="let colProduct of dashboardProducers.colProduct">
+        <ng-container *ngIf="!colProduct.display">
+          <button mat-stroked-button color="primary" (click)="toogleColProduct(colProduct.id)" title="afficher le produit {{colProduct.name}}">{{colProduct.name}}</button>
+        </ng-container>
+      </ng-container>
+    </div>
+    <div class="col-4">
+      <ng-container *ngFor="let rowClient of dashboardClients.row" >
+        <ng-container *ngIf="!rowClient.display">
+          <button mat-stroked-button color="accent" (click)="toogleRowClient(rowClient.id)" title="afficher le client {{rowClient.name}}">{{rowClient.name}}</button>
+        </ng-container>
+      </ng-container>
+    </div>
+  </div>
+</section>

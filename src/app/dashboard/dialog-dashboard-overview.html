@@ -1,0 +1,8 @@
+<div mat-dialog-content>
+  <p>{{data.message}}</p>
+</div>
+<div mat-dialog-actions>
+  <button mat-button (click)="onNoClick()" *ngIf="data.displayNoButton">Annuler</button>
+  <button mat-button [mat-dialog-close]="'vierge'" cdkFocusInitial>tableau vierge</button>
+  <button mat-button [mat-dialog-close]="'existant'" cdkFocusInitial>tableau pré-rempli</button>
+</div>
