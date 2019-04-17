@@ -1,0 +1,9 @@
+<div class="main-container">
+  <h3>Classer les produits</h3>
+  <ng-container *ngFor="let productSort of productsSort; index as oldIdx">
+    <mat-form-field class="rowProduct">
+      <input matInput type="number" name="sortIndex" id="sortIndex" [(ngModel)]="productSort.sortIndex" (change)="changeSortIndex(oldIdx, productSort.sortIndex)"/>
+      <span matPrefix>{{productSort.name}}:&nbsp;&nbsp;</span>
+    </mat-form-field>
+  </ng-container>
+</div>
