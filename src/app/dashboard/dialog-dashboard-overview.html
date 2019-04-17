@@ -1,8 +1,11 @@
 <div mat-dialog-content>
   <p>{{data.message}}</p>
+  <input matInput type="number" [(ngModel)]="data.price" *ngIf="data.contentType=='editPrice'"/>
 </div>
 <div mat-dialog-actions>
-  <button mat-button (click)="onNoClick()" *ngIf="data.displayNoButton">Annuler</button>
-  <button mat-button [mat-dialog-close]="'vierge'" cdkFocusInitial>tableau vierge</button>
-  <button mat-button [mat-dialog-close]="'existant'" cdkFocusInitial>tableau pré-rempli</button>
+  <button mat-button (click)="onNoClick()">Annuler</button>
+  <button mat-button [mat-dialog-close]="'vierge'" cdkFocusInitial *ngIf="data.contentType=='createDashboard'">tableau vierge</button>
+  <button mat-button [mat-dialog-close]="'existant'" cdkFocusInitial *ngIf="data.contentType=='createDashboard'">tableau pré-rempli</button>
+  <button mat-button [mat-dialog-close]="'clear'" cdkFocusInitial *ngIf="data.contentType=='clearDashboard'">supprimer</button>
+  <button mat-stroked-button [mat-dialog-close]="data.price" *ngIf="data.contentType=='editPrice'">enregistrer</button>
 </div>

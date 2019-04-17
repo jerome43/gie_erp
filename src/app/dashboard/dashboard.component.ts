@@ -4,22 +4,21 @@ import {Producer} from "../producer/producer";
 import { Client } from "../client/client";
 import { AngularFirestore, AngularFirestoreCollection, AngularFirestoreDocument } from '@angular/fire/firestore';
 import { Observable } from 'rxjs'
-import { tap, map, startWith, finalize, first } from 'rxjs/operators';
-import {fromArray} from "rxjs/internal/observable/fromArray";
-import { Router } from '@angular/router';
-import { ActivatedRoute } from '@angular/router';
-import { Validators, FormGroup, FormControl, FormBuilder, FormArray  } from '@angular/forms';
+import { tap, map } from 'rxjs/operators';
 import {MatDialog, MatDialogRef, MAT_DIALOG_DATA, MatBottomSheet, MatBottomSheetRef, MAT_BOTTOM_SHEET_DATA} from '@angular/material';
 import {Subscription} from "rxjs/index";
 import {firestore} from 'firebase/app';
-import { AngularFireStorage } from '@angular/fire/storage';
 import Timestamp = firestore.Timestamp;
-import { Dashboard }  from './dashboard';
+import { DashboardClient }  from './dashboard';
+import { DashboardProducer }  from './dashboard';
+import {PdfService} from "../pdf/pdf.service";
+import {PdfType} from '../pdf/pdf-type';
+import {ProgressSpinnerDialogComponent} from '../progress-spinner-dialog/progress-spinner-dialog.component';
 
 export interface ClientId extends Client { id: string; }
 export interface ProductId extends Product { id: string; }
 export interface ProducerId extends Producer { id: string; }
-export interface DialogDashboardData { message: string; displayNoButton:boolean; date: Date }
+export interface DialogDashboardData { message: string; contentType:string; date: Date; price:number }
 
 @Component({
   selector: 'app-dashboard',
@@ -28,15 +27,14 @@ export interface DialogDashboardData { message: string; displayNoButton:boolean;
 })
 export class DashboardComponent implements OnInit {
 
-  private dashboardClients: Dashboard = {
+  dashboardClients: DashboardClient = {
     colProduct: [],
     row: [],
     sum: []
-    //datas: {quantityClients: [], quantityProducers: []}
   };
   private dashboardClientsSubscription: Subscription;
 
-  private dashboardProducers: Dashboard = {
+  dashboardProducers: DashboardProducer = {
     colProduct: [],
     row: [],
     sum: []
@@ -45,7 +43,7 @@ export class DashboardComponent implements OnInit {
 
 
   private dashboardId: string;
-  private dashboardDate = new Date(new Date().getFullYear(),new Date().getMonth() , new Date().getDate());
+  dashboardDate = new Date(new Date().getFullYear(),new Date().getMonth() , new Date().getDate());
   private lastDashboardDate: Date;
 
   // for client
@@ -64,34 +62,48 @@ export class DashboardComponent implements OnInit {
   private note: string='';
   private noteSubscription: Subscription;
 
+  // for delivery
+  private indexNumeroDelivery:number;
+  private tva:number;
 
-  constructor(private router: Router, private route: ActivatedRoute, private db: AngularFirestore, private fb: FormBuilder, private dialog: MatDialog, private bottomSheet: MatBottomSheet) {
+  // for spinner dialog
+  private progressSpinnerDialogRef:MatDialogRef<ProgressSpinnerDialogComponent>;
+
+
+  constructor(private db: AngularFirestore, private dialog: MatDialog, private bottomSheet: MatBottomSheet, private pdfService: PdfService) {
   }
 
   ngOnInit() {
     this.observeLastDashboardDate();
     this.testDashBoardExist(this.dashboardDate);
     this.getNote(this.dashboardDate);
+    this.observeIndexNumeroDelivery();
+    this.observeTva();
   }
 
   ngOnDestroy() {
-    this.noteSubscription.unsubscribe();
-    this.dashboardProducersSubscription.unsubscribe();
-    this.dashboardClientsSubscription.unsubscribe();
+    if (this.noteSubscription!=undefined) {this.noteSubscription.unsubscribe();}
+    if (this.dashboardProducersSubscription!=undefined) {this.dashboardProducersSubscription.unsubscribe();}
+    if (this.dashboardClientsSubscription!=undefined) {this.dashboardClientsSubscription.unsubscribe();}
   }
 
   // USER INTERFACE EVENTS
 
-  change_cell_table(collection, dataset, i, ii) {
-    console.log(dataset, ' / ',i, ' /' ,ii);
+  change_cell_table(collection, dataset, iC, iP) {
+    console.log(dataset, ' / ',iC, ' /' ,iP);
     collection=="clients"? this.calculateSumClients(()=>this.updateDashboard(collection)) : this.calculateSumProducers(()=>this.updateDashboard(collection));
+  }
+
+  editPrice(productId, clientId, indexRowClient, indexColumnProduct) {
+    console.log(productId, clientId, indexRowClient, indexColumnProduct);
+    this.openDialogWantEditPrice("Editer le prix", indexRowClient, indexColumnProduct, this.dashboardClients.row[indexRowClient].price[indexColumnProduct]);
   }
 
   toogleColProduct(idProduct) {
     console.log("hideColProduct");
     for (var i=0; i<this.dashboardClients.colProduct.length; i++) {
       //console.log('idProduct : ', idProduct, ' / ', this.dashboard.colProduct[i].id );
-      if (idProduct==this.dashboardClients.colProduct[i].id) {
+      if (idProduct==this.dashboardClients.colProduct[i].product.id) {
         this.dashboardClients.colProduct[i].display = this.dashboardClients.colProduct[i].display != true;
         this.dashboardClients.sum[i].display = this.dashboardClients.sum[i].display != true;
         this.dashboardProducers.colProduct[i].display = this.dashboardProducers.colProduct[i].display != true;
@@ -126,22 +138,50 @@ export class DashboardComponent implements OnInit {
     }
   }
 
-  changeDate(date) {
+  wantGenerateDeliveryPdf(clientId, indexClient) {
+    console.log('wantGenerateDeliveryPdf : ', clientId, indexClient);
+    var numeroDelivery: number;
+    if (this.dashboardClients.row[indexClient].numeroDelivery==null) {
+      numeroDelivery = this.indexNumeroDelivery+1;
+      this.dashboardClients.row[indexClient].numeroDelivery = this.indexNumeroDelivery+1;
+      this.updateNumeroDelivery();
+      this.updateDashboard('clients');
+    }
+    else {
+      numeroDelivery = this.dashboardClients.row[indexClient].numeroDelivery;
+    }
+
+    var products: {product: ProductId, quantity:number, price: number, display:boolean}[] = [];
+      for (var i=0; i< this.dashboardClients.colProduct.length; i++) {
+        products.push({product: this.dashboardClients.colProduct[i].product,
+          quantity: this.dashboardClients.row[indexClient].quantity[i],
+          price: this.dashboardClients.row[indexClient].price[i],
+          display:this.dashboardClients.colProduct[i].display})
+      }
+      var client;
+      var clientSubscription = this.db.doc<Client>('clients/'+clientId).valueChanges().pipe(
+        tap(clientResult => {
+          client = clientResult;
+        })).subscribe(()=>{
+        clientSubscription.unsubscribe();
+        this.pdfService.wantGeneratePdf(client, products, numeroDelivery, this.dashboardDate, this.tva, PdfType.deliveryReceipt);
+      });
+  }
+
+  changeDate() {
     console.log("dateChange: ", this.dashboardDate);
-    //console.log("dateChange: ", date);
-   // this.testDashBoardExist(date);
     this.testDashBoardExist(this.dashboardDate);
   }
 
   clearDashboard() {
-    this.createNewDashboard(this.dashboardDate);
+    this.openDialogWantClearDashboard("Voulez-vous vraiment supprimer toutes les commandes et approvisionnements du tableau courant ?");
   }
 
   openBottomSheet(): void {
-    const bottomSheet = this.bottomSheet.open(BottomSheetOverviewNote, {data: this.note}).afterDismissed();
-      bottomSheet.subscribe(data => {
+    const bottomSheet = this.bottomSheet.open(BottomSheetOverviewNote, {data: this.note});
+      bottomSheet.afterDismissed().subscribe(data => {
       console.log('BottomSheet was closed', data);
-        if (data!=undefined) { // car si la modale est fermée par clic en dehors de sa zone, data n'est pas tranmis
+        if (data!=undefined) { // car si la modale est fermée par clic en dehors de sa zone, data n'est pas transmis
           this.note = data;
           this.addNote(data);
         }
@@ -161,7 +201,30 @@ export class DashboardComponent implements OnInit {
       });
   }
 
+  observeIndexNumeroDelivery() {
+    console.log("observeIndexNumeroDelivery : ");
+    this.db.doc<any>('parameters/numeroDelivery').valueChanges().subscribe(
+      numeroDelivery => {
+        this.indexNumeroDelivery = numeroDelivery.index;
+        console.log("observeIndexNumeroDeliverySubscribe : ", this.indexNumeroDelivery);
+      });
+  }
+
+  observeTva() {
+    console.log("observeTva : ");
+    this.db.doc<any>('parameters/tva').valueChanges().subscribe(
+      tva => {
+        this.tva = tva.taux;
+        console.log("observeTvaSubscribe : ", this.tva);
+      });
+  }
+
+  updateNumeroDelivery() {
+    this.db.collection('parameters').doc("numeroDelivery").update({index: this.indexNumeroDelivery+1});
+  }
+
   createNewDashboard(date) {
+    this.showProgressSpinnerDialog();
     this.dashboardClients = {
       colProduct: [],
       row: [],
@@ -174,56 +237,63 @@ export class DashboardComponent implements OnInit {
     };
 
      // loading clients and update dashboard
-    this.fbClients = this.db.collection('clients', ref => ref.orderBy("name", "asc")).snapshotChanges().pipe(
+    //this.fbClients = this.db.collection('clients', ref => ref.where('active', '==', 'true')).snapshotChanges().pipe(
+      this.fbClients = this.db.collection('clients', ref => ref.orderBy('name', 'asc')).snapshotChanges().pipe(
       map(actions => actions.map(a => {
         const data = a.payload.doc.data() as Client;
         const name = data.name;
         const id = a.payload.doc.id;
-        this.dashboardClients.row.push({id, name, display: true, quantity: []});
-        //this.dashboard.datas.clients.push({id: id, name: name, products : []});
+        if (data.active=="true") {
+          this.dashboardClients.row.push({id, name, numeroDelivery: null, display: true, quantity: [], price: []});
+        }
         return {id, ...data };
       })));
 
 
     // loading products and update dashboard
-     this.fbProducts = this.db.collection('products', ref => ref.orderBy("name", "asc")).snapshotChanges().pipe(
-     map(actions => actions.map(a => {
-       const data = a.payload.doc.data() as Product;
-       const name = data.name;
-       const id = a.payload.doc.id;
-       this.dashboardClients.colProduct.push({id, name, display: true});
-       this.dashboardProducers.colProduct.push({id, name, display: true});
-       this.dashboardClients.row.forEach(function(client) {
-        client.quantity.push(null);
-        });
-       this.dashboardProducers.row.forEach(function(producer) {
-        producer.quantity.push(null);
-        });
-       this.dashboardClients.sum.push({display: true, quantity: 0});
-       this.dashboardProducers.sum.push({display: true, quantity: 0});
-
+       this.fbProducts = this.db.collection('products', ref => ref.orderBy('sortIndex', 'asc')).snapshotChanges().pipe(
+         map(actions => actions.map(a => {
+          const data = a.payload.doc.data() as ProductId;
+          //const name = data.name;
+          const id = a.payload.doc.id;
+          data.id = a.payload.doc.id;
+             if(data.active=="true") {
+               this.dashboardClients.colProduct.push({product: data, display: true});
+               this.dashboardProducers.colProduct.push({product: data, display: true});
+               this.dashboardClients.row.forEach(function(client) {
+                 client.quantity.push(null);
+                 client.price.push(null);
+               });
+               this.dashboardProducers.row.forEach(function(producer) {
+                 producer.quantity.push(null);
+               });
+               this.dashboardClients.sum.push({display: true, quantity: 0});
+               this.dashboardProducers.sum.push({display: true, quantity: 0});
+             }
      return {id, ...data };
      })));
 
     // loading producers and update dashboard
-    this.fbProducers = this.db.collection('producers', ref => ref.orderBy("name", "asc")).snapshotChanges().pipe(
-      map(actions => actions.map(a => {
-        const data = a.payload.doc.data() as Producer;
-        const name = data.name;
-        const id = a.payload.doc.id;
-        this.dashboardProducers.row.push({id, name, display: true, quantity: []});
-        //this.dashboard.datas.producers.push({id: id, name: name, products : []});
-        return {id, ...data };
-      })));
+      this.fbProducers = this.db.collection('producers', ref => ref.orderBy("name", "asc")).snapshotChanges().pipe(
+        map(actions => actions.map(a => {
+          const data = a.payload.doc.data() as Producer;
+          const name = data.name;
+          const id = a.payload.doc.id;
+            if (data.active=="true") {this.dashboardProducers.row.push({id, name, display: true, quantity: []});}
+            // todo pour améliorer performance, il ne faudrait charger que les actives depuis la DB et trier ensuite
+          //this.dashboardProducers.row.push({id, name, display: true, quantity: []});
+          return {id, ...data };
+        })));
 
     this.fbProducersSubscription = this.fbProducers.subscribe((producer)=>{ // subscribe to clients changes
       this.fbProducersSubscription.unsubscribe();// unsubscribe to avoid memory leaks
       this.fbClientsSubscription = this.fbClients.subscribe((clients)=>{ // subscribe to clients changes
         this.fbClientsSubscription.unsubscribe();// unsubscribe to avoid memory leaks
-        console.log('Current clients: ', clients);
+       // console.log('Current clients: ', clients);
         this.fbProductsSubscription = this.fbProducts.subscribe((products)=>{ // subscribe to products changes
           this.fbProductsSubscription.unsubscribe(); // unsubscribe to avoid memory leaks
-          console.log('Current products: ', products);
+       //   console.log('Current products: ', products);
+          this.hideProgressSpinnerDialog();
           console.log('dashboard clients : ', this.dashboardClients);
           console.log('dashboard producers: ', this.dashboardProducers);
           this.addDashboard(date);
@@ -234,19 +304,25 @@ export class DashboardComponent implements OnInit {
 
 
   updateDashboard(collection) {
-    console.log("set dashboard");
+    console.log("update dashboard");
+    this.showProgressSpinnerDialog();
     if (collection=="clients") {
       this.db.collection('dashboardClients').doc(this.dashboardId).update({dashboard: this.dashboardClients, date: this.dashboardDate}).then(()=> {
-          console.log("dashboard clients set with ID: ", this.dashboardId)})
+          console.log("dashboard clients set with ID: ", this.dashboardId);
+          this.hideProgressSpinnerDialog();
+      })
         .catch(function(error) {
           console.error("Error set document: ", error);
+          this.hideProgressSpinnerDialog();
         });
     }
     else if (collection=="producers") {
       this.db.collection('dashboardProducers').doc(this.dashboardId).update({dashboard: this.dashboardProducers, date: this.dashboardDate}).then(()=> {
-          console.log("dashboard producers set with ID: ", this.dashboardId)})
+          console.log("dashboard producers set with ID: ", this.dashboardId);
+          this.hideProgressSpinnerDialog();})
         .catch(function(error) {
           console.error("Error set document: ", error);
+          this.hideProgressSpinnerDialog();
         });
     }
     else if (collection=="both") {
@@ -254,21 +330,26 @@ export class DashboardComponent implements OnInit {
           console.log("dashboard producers set with ID: ", this.dashboardId);
           this.db.collection('dashboardClients').doc(this.dashboardId).update({dashboard: this.dashboardClients, date: this.dashboardDate}).then(()=> {
               console.log("dashboard clients set with ID: ", this.dashboardId);
+              this.hideProgressSpinnerDialog();
             })
-            .catch(function(error) {
+            .catch((error)=> {
               console.error("Error set document: ", error);
+              this.hideProgressSpinnerDialog();
               // todo delete dashboad producer
             });
       })
-        .catch(function(error) {
+        .catch((error)=> {
           console.error("Error set document: ", error);
+          this.hideProgressSpinnerDialog();
         });
     }
   }
 
 
   testDashBoardExist(date) { // test si un dashboard existe à la date donnée en paramètre
+    //this.showProgressSpinnerDialog();
     this.db.collection('dashboardClients', ref => ref.where('date', '==', date)).get().subscribe(querySnapshot=> {
+     // this.hideProgressSpinnerDialog();
       console.log('querying dahboard exist : ', querySnapshot);
       if (querySnapshot.empty) {
         console.log(" dashboard does not exist at this date :", date);
@@ -290,15 +371,20 @@ export class DashboardComponent implements OnInit {
   }
 
   getDashboardProducers(date) {
+    const progressSpinnerDialogRef = this.dialog.open(ProgressSpinnerDialogComponent, {
+      panelClass: 'transparent',
+      disableClose: true
+    });
     if (this.dashboardProducersSubscription!=undefined) {this.dashboardProducersSubscription.unsubscribe()}
     this.dashboardProducersSubscription = this.db.collection('dashboardProducers', ref => ref.where('date', '==', date)).snapshotChanges().pipe(
       map(actions => actions.map(a => {
-        const data = a.payload.doc.data() as {date: Timestamp, dashboard: Dashboard};
+        const data = a.payload.doc.data() as {date: Timestamp, dashboard: DashboardProducer};
         const id = a.payload.doc.id;
         return {id, ...data };
       })))
       .subscribe((querySnapshot)=>{
-        console.log('querying dashboard producers : ', querySnapshot);
+        progressSpinnerDialogRef.close();
+        console.log('get dashboard producers : ', querySnapshot);
         if (querySnapshot[0]==undefined) {
           console.warn("Aucun tableau à cette date ", date)
         }
@@ -310,15 +396,20 @@ export class DashboardComponent implements OnInit {
   }
 
   getDasboardClients(date) {
+    const progressSpinnerDialogRef = this.dialog.open(ProgressSpinnerDialogComponent, {
+      panelClass: 'transparent',
+      disableClose: true
+    });
     if (this.dashboardClientsSubscription!=undefined) {this.dashboardClientsSubscription.unsubscribe()}
     this.dashboardClientsSubscription = this.db.collection('dashboardClients', ref => ref.where('date', '==', date)).snapshotChanges().pipe(
       map(actions => actions.map(a => {
-        const data = a.payload.doc.data() as {date: Timestamp, dashboard: Dashboard};
+        const data = a.payload.doc.data() as {date: Timestamp, dashboard: DashboardClient};
         const id = a.payload.doc.id;
         return {id, ...data };
       })))
       .subscribe((querySnapshot)=>{
-        console.log('querying dashboard clients : ', querySnapshot);
+        progressSpinnerDialogRef.close();
+        console.log('get dashboard clients : ', querySnapshot);
         if (querySnapshot[0] == undefined) {
           console.warn("Aucun tableau à cette date ", date)
         }
@@ -330,14 +421,17 @@ export class DashboardComponent implements OnInit {
   }
 
   getLastAndAddDashboard(date) {
+    this.showProgressSpinnerDialog();
     this.db.collection('dashboardClients', ref => ref.where('date', '==', this.lastDashboardDate)).get().subscribe(querySnapshot=>{
       console.log('querying dahboard: ', querySnapshot);
       if (querySnapshot.empty) {
+        this.hideProgressSpinnerDialog();
         console.log(" Aucun tableau à cette date :", this.lastDashboardDate);
       }
       else {
         this.dashboardClients = querySnapshot.docs[0].data().dashboard;
         this.db.collection('dashboardProducers', ref => ref.where('date', '==', this.lastDashboardDate)).get().subscribe(querySnapshot=>{
+          this.hideProgressSpinnerDialog();
           console.log('querying dahboard: ', querySnapshot);
           if (querySnapshot.empty) {
             console.log(" Aucun tableau à cette date :", this.lastDashboardDate);
@@ -360,21 +454,25 @@ export class DashboardComponent implements OnInit {
   }
 
   addDashboard(date) {
+    this.showProgressSpinnerDialog();
     var idDate= date.getDate()+'-'+(date.getMonth()+1)+'-'+date.getFullYear();
     this.db.collection('dashboardClients').doc(idDate).set({dashboard: this.dashboardClients, date: date})
       .then((doc)=> {
         console.log("dashboard client add with ID: ", idDate);
         this.db.collection('dashboardProducers').doc(idDate).set({dashboard: this.dashboardProducers, date: date})
           .then((doc)=> {
+            this.hideProgressSpinnerDialog();
             console.log("dashboard producers add with ID: ", idDate);
             this.dashboardId = idDate;
             this.getDashboard(date); // on relance pour pouvoir s'abonner à des mises à jours de données venant d'un autre utilisateur
           })
-          .catch(function(error) {
+          .catch((error)=> {
+            this.hideProgressSpinnerDialog();
             console.error("Error adding document dashboard producers : ", error);
           });
         })
-      .catch(function(error) {
+      .catch((error)=> {
+        this.hideProgressSpinnerDialog();
         console.error("Error adding document dashboard clients : ", error);
       });
   }
@@ -435,7 +533,7 @@ export class DashboardComponent implements OnInit {
         this.dashboardClients.sum[i].quantity= quantity;
       }
     }
-    console.log("calculateSumClientss finish");
+    console.log("calculateSumClients finish");
     callback();
   }
 
@@ -444,7 +542,7 @@ export class DashboardComponent implements OnInit {
       width: '450px',
       data: {
         message: message,
-        displayNoButton:true,
+        contentType:"createDashboard",
         date : date
       }
     });
@@ -463,6 +561,54 @@ export class DashboardComponent implements OnInit {
         this.dashboardDate = this.lastDashboardDate;
         }
       });
+  }
+
+  openDialogWantClearDashboard(message): void {
+    const dialogRef = this.dialog.open(DialogDashboardOverview, {
+      width: '450px',
+      data: {
+        message: message,
+        contentType:"clearDashboard",
+      }
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      console.log('The dialog was closed');
+      if (result=='clear') {
+        this.createNewDashboard(this.dashboardDate);
+      }
+    });
+  }
+
+  openDialogWantEditPrice(message, indexRowClient, indexColumnProduct, price): void {
+    const dialogRef = this.dialog.open(DialogDashboardOverview, {
+      width: '450px',
+      data: {
+        message: message,
+        contentType:"editPrice",
+        price: price
+      }
+    });
+
+    dialogRef.afterClosed().subscribe(price => {
+      console.log('The dialog was closed, nouveau prix : ', price);
+      if (price!=undefined) { // car si la modale est fermée par clic en dehors de sa zone, data n'est pas transmis
+        this.dashboardClients.row[indexRowClient].price[indexColumnProduct] = price;
+        this.updateDashboard("clients");
+      }
+    });
+  }
+
+  showProgressSpinnerDialog() {
+    if (this.progressSpinnerDialogRef!=undefined) {this.progressSpinnerDialogRef.close()} // previent de conflits de plusieur dialog ouvertes simultanément et non fermées
+    this.progressSpinnerDialogRef = this.dialog.open(ProgressSpinnerDialogComponent, {
+      panelClass: 'transparent',
+      disableClose: true
+    });
+  }
+
+  hideProgressSpinnerDialog() {
+    this.progressSpinnerDialogRef.close();
   }
 
 }

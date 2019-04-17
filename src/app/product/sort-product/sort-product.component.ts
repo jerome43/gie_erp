@@ -14,7 +14,7 @@ import {ProgressSpinnerDialogComponent} from '../../progress-spinner-dialog/prog
 export class SortProductComponent implements OnInit {
 
   private productsSubscription : Subscription;
-  private productsSort: {id: string, sortIndex:number; name:string}[] =[];
+  productsSort: {id: string, sortIndex:number; name:string}[] =[];
   private productSortLastIndex:number;
 
   constructor( private db: AngularFirestore, private dialog: MatDialog) { }

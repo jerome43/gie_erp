@@ -7,8 +7,8 @@ export class Producer {
   town: string;
   country: string;
   phone: string;
-  //email: string;
   contacts: [Contact];
   comment: string;
   date: Date;
+  active:string;
 }

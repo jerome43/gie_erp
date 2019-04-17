@@ -15,7 +15,7 @@ export class AuthService {
   isLoggedIn = false;
 
   // todo récupérer les user dans la BD pour ne pas qu'ils apparaissent dans le code source et compromettent la sécurité.
-  authorizedUser = ["jerome.lions@ovh.fr","denis@giefruitsrouges.fr"];
+  authorizedUser = ["jerome.lions@ovh.fr","denis@giefruitsrouges.fr", "kesia@giefruitsrouges.fr", "florence@giefruitsrouges.fr"];
 
   // store the URL so we can redirect after logging in
   redirectUrl: string = "dashboard";

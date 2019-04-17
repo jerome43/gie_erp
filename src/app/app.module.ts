@@ -17,6 +17,7 @@ import {MatRadioModule} from '@angular/material/radio';
 import {MatCheckboxModule} from '@angular/material/checkbox';
 import {MatFormFieldModule} from '@angular/material/form-field';
 import {MatIconModule} from '@angular/material/icon';
+import {MatProgressSpinnerModule} from '@angular/material/progress-spinner';
 import {MatDatepickerModule} from '@angular/material/datepicker';
 import { HeaderComponent } from './header/header.component';
 import { MobileMenuComponent } from './mobile-menu/mobile-menu.component';
@@ -50,6 +51,9 @@ import {DialogListEmployeOverview} from "./employe/list-employe/list-employe.com
 import { DashboardComponent } from './dashboard/dashboard.component';
 import { DialogDashboardOverview } from './dashboard/dashboard.component';
 import {BottomSheetOverviewNote} from "./dashboard/dashboard.component";
+import { ParametersComponent } from './parameters/parameters.component';
+import { SortProductComponent } from './product/sort-product/sort-product.component';
+import { ProgressSpinnerDialogComponent } from './progress-spinner-dialog/progress-spinner-dialog.component';
 
 
 @NgModule({
@@ -83,7 +87,10 @@ import {BottomSheetOverviewNote} from "./dashboard/dashboard.component";
     DialogListEmployeOverview,
     DashboardComponent,
     DialogDashboardOverview,
-    BottomSheetOverviewNote
+    BottomSheetOverviewNote,
+    ParametersComponent,
+    SortProductComponent,
+    ProgressSpinnerDialogComponent
   ],
   imports: [
     BrowserModule,
@@ -110,6 +117,7 @@ import {BottomSheetOverviewNote} from "./dashboard/dashboard.component";
     MatAutocompleteModule,
     MatSelectModule,
     MatIconModule,
+    MatProgressSpinnerModule,
     MatDatepickerModule,
     MatNativeDateModule,
     FlexLayoutModule,
@@ -134,6 +142,7 @@ import {BottomSheetOverviewNote} from "./dashboard/dashboard.component";
     DialogDetailEmployeOverview,
     DialogListEmployeOverview,
     DialogDashboardOverview,
-    BottomSheetOverviewNote]
+    BottomSheetOverviewNote,
+    ProgressSpinnerDialogComponent]
 })
 export class AppModule { }

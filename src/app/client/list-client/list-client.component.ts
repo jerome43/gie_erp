@@ -7,6 +7,7 @@ import { Client } from '../client';
 import { Router } from '@angular/router';
 import {MatDialog, MatDialogRef, MAT_DIALOG_DATA} from '@angular/material';
 import {Subscription} from "rxjs/index";
+import {ProgressSpinnerDialogComponent} from '../../progress-spinner-dialog/progress-spinner-dialog.component';
 
 export interface DialogListClientData { message: string; displayNoButton:boolean }
 export interface ClientId extends Client { id: string; }
@@ -20,9 +21,9 @@ export interface ClientId extends Client { id: string; }
 export class ListClientComponent implements OnInit, OnDestroy {
   private fbClients: Observable<ClientId[]>; // clients on Firebase
   private fbClientsSubscription : Subscription;
-  private displayedColumns: string[] = ['name', 'date', 'edit', 'delete', 'id']; // colones affichées par le tableau
+  displayedColumns: string[] = ['name', 'active', 'date', 'edit', 'delete', 'id']; // colones affichées par le tableau
   private clientsData : Array<any>; // tableau qui va récupérer les données adéquates de fbClients pour être ensuite affectées au tableau de sources de données
-  private dataSource : MatTableDataSource<ClientId>; // source de données du tableau
+  dataSource : MatTableDataSource<ClientId>; // source de données du tableau
 
   @ViewChild(MatPaginator) paginator: MatPaginator; // pagination du tableau
   @ViewChild(MatSort) sort: MatSort; // tri sur le tableau
@@ -53,12 +54,12 @@ export class ListClientComponent implements OnInit, OnDestroy {
           const id = client.id;
           const name = client.name;
           const date = client.date;
-          this.clientsData.push({id, name, date});
+          const active = client.active;
+          this.clientsData.push({id, name, date, active});
         });
         console.log("this.clientsData : ", this.clientsData);
         this.dataSource = new MatTableDataSource<ClientId>(this.clientsData);
         this.dataSource.paginator = this.paginator; // pagination du tableau
-        //this.sort.sort(<MatSortable>({id: 'name', start: 'desc'})); // pour trier sur les noms par ordre alphabétique
         this.dataSource.sort = this.sort; // tri sur le tableau
     });
   }
@@ -96,8 +97,10 @@ export class ListClientComponent implements OnInit, OnDestroy {
 
   deleteClient(eventTargetId) {
     console.log("deleteClient"+eventTargetId);
+    const progressSpinnerDialogRef = this.dialog.open(ProgressSpinnerDialogComponent, {panelClass: 'transparent',disableClose: true});
     this.clientsData = [];
     this.db.doc("clients/"+eventTargetId).delete().then(data => {
+      progressSpinnerDialogRef.close();
       this.openDialogDelete("Le client "+eventTargetId+" a été supprimé.")
     });
   }

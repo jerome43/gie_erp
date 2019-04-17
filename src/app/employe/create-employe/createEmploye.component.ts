@@ -4,6 +4,7 @@ import { AngularFirestore, AngularFirestoreCollection } from '@angular/fire/fire
 import { Observable } from 'rxjs';
 import { Validators, FormGroup, FormControl, FormBuilder, FormArray } from '@angular/forms';
 import {MatDialog, MatDialogRef, MAT_DIALOG_DATA} from '@angular/material';
+import {ProgressSpinnerDialogComponent} from '../../progress-spinner-dialog/progress-spinner-dialog.component';
 
 export interface DialogCreateEmployeData {
   id: string;
@@ -17,7 +18,7 @@ export interface DialogCreateEmployeData {
 
 export class CreateEmployeComponent implements OnInit {
 
-  private createEmployeForm;
+  createEmployeForm;
   private employesCollection: AngularFirestoreCollection<Employe>;
 
   constructor(db: AngularFirestore, private fb: FormBuilder, private dialog: MatDialog) {
@@ -29,8 +30,13 @@ export class CreateEmployeComponent implements OnInit {
   }
 
   addEmploye() {
+    const progressSpinnerDialogRef = this.dialog.open(ProgressSpinnerDialogComponent, {
+      panelClass: 'transparent',
+      disableClose: true
+    });
     this.employesCollection.add(this.createEmployeForm.value).then(data => {
       console.log("Document written with ID: ", data.id);
+      progressSpinnerDialogRef.close();
       this.openDialog(data.id)});
   }
 

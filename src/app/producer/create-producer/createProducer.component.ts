@@ -4,6 +4,7 @@ import { AngularFirestore, AngularFirestoreCollection } from '@angular/fire/fire
 import { Observable } from 'rxjs';
 import { Validators, FormGroup, FormControl, FormBuilder, FormArray } from '@angular/forms';
 import {MatDialog, MatDialogRef, MAT_DIALOG_DATA} from '@angular/material';
+import {ProgressSpinnerDialogComponent} from '../../progress-spinner-dialog/progress-spinner-dialog.component';
 
 export interface DialogCreateProducerData {
   id: string;
@@ -17,7 +18,7 @@ export interface DialogCreateProducerData {
 
 export class CreateProducerComponent implements OnInit {
 
-  private createProducerForm;
+  createProducerForm;
   private producersCollection: AngularFirestoreCollection<Producer>;
 
   constructor(db: AngularFirestore, private fb: FormBuilder, private dialog: MatDialog) {
@@ -29,8 +30,10 @@ export class CreateProducerComponent implements OnInit {
   }
 
   addProducer() {
+    const progressSpinnerDialogRef = this.dialog.open(ProgressSpinnerDialogComponent, {panelClass: 'transparent',disableClose: true});
     this.producersCollection.add(this.createProducerForm.value).then(data => {
       console.log("Document written with ID: ", data.id);
+      progressSpinnerDialogRef.close();
       this.openDialog(data.id)});
   }
 
@@ -54,15 +57,6 @@ export class CreateProducerComponent implements OnInit {
   }
 
   get name() { return this.createProducerForm.get('name'); }
-  /*
-  get email() { return this.createProducerForm.get('email'); }
-  getEmailErrorMessage() {
-    return this.email.hasError('required') ? 'Vous devez renseigner l\'émail' :
-      this.email.hasError('email') ? 'L\'émail semble incorrect' :
-        '';
-  }
-  */
-
 
   openDialog(id): void {
     const dialogRef = this.dialog.open(DialogCreateProducerOverview, {
@@ -84,7 +78,6 @@ export class CreateProducerComponent implements OnInit {
       town: [''],
       country: ['France'],
       phone: [''],
-      //email: ['', [Validators.required, Validators.email]],
       contacts: this.fb.array([
         this.fb.group({
           contactName: [''],
@@ -94,15 +87,14 @@ export class CreateProducerComponent implements OnInit {
           contactEmail: ['', [Validators.email]]})
       ]),
       comment: [''],
-      //discount: ['0'],
-      //maintenance: ['false'],
-      date: [new Date()]
+      date: [new Date()],
+       active: ['false'],
     });
     this.createProducerForm.valueChanges.subscribe(data => {
       console.log('Form changes', data);
     });
   }
-
+/*
   importProducers() {
     var producers = [
       {"id":"1","nom":"BONNEFOY JF","adresse":"le bourg","code_postal":"43320","ville":"Chaspuzac","telephone":"0620867200","email":null,"date_add":"2018-05-03 00:00:00"},
@@ -145,11 +137,12 @@ export class CreateProducerComponent implements OnInit {
       producerImport.ville!=null ? town=producerImport.ville : town='';
       producerImport.email != null ? contactEmail=producerImport.email : contactEmail='';
 
-      var producer: Producer = {name : producerImport.nom, address : address, zipcode : zipcode, town: town, country: 'France', phone : telephone, contacts: [{contactName : '', contactFunction: '', contactPhone: '', contactCellPhone: '', contactEmail : contactEmail}], comment: '', date : date};
+      var producer: Producer = {name : producerImport.nom, address : address, zipcode : zipcode, town: town, country: 'France', phone : telephone, contacts: [{contactName : '', contactFunction: '', contactPhone: '', contactCellPhone: '', contactEmail : contactEmail}], comment: '', date : date, active:'false'};
       this.producersCollection.add(producer).then(data => {
         console.log("Document written with ID: ", data.id)});
     }, this)
   };
+  */
 
 }
 

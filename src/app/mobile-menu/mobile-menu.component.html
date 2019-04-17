@@ -43,7 +43,9 @@
     <span>Export commandes</span>
   </a>
 </mat-menu-->
-
+<mat-list-item>
+  <button mat-button routerLink="/dashboard" routerLinkActive="active"><mat-icon>dashboard</mat-icon><span class="top-menu-item">Tableau de bord</span></button>
+</mat-list-item>
 <mat-list-item>
   <button mat-button [matMenuTriggerFor]="clientMenu">
     <mat-icon>contact_mail</mat-icon>
@@ -93,6 +95,10 @@
     <mat-icon>sort</mat-icon>
     <span>Liste produits</span>
   </a>
+  <a mat-menu-item (click)="onSidenavClose()" routerLink="/sort-products" routerLinkActive="active">
+    <mat-icon>format_list_numbered</mat-icon>
+    <span>Classer les produits</span>
+  </a>
   <!--a mat-menu-item (click)="onSidenavClose()" routerLink="/stock" routerLinkActive="active">
     <mat-icon>compare_arrows</mat-icon>
     <span>Stocks</span>
@@ -113,5 +119,9 @@
   <a mat-menu-item (click)="onSidenavClose()" routerLink="/list-employes" routerLinkActive="active">
     <mat-icon>sort</mat-icon><mat-icon>people_outline</mat-icon>
     <span>Liste employé</span>
+  </a>
+  <a mat-menu-item (click)="onSidenavClose()" routerLink="/parameters" routerLinkActive="active">
+    <mat-icon>build</mat-icon>
+    <span>Paramètres généraux (TVA...)</span>
   </a>
 </mat-menu>

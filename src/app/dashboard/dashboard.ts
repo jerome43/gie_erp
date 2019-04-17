@@ -1,10 +1,15 @@
-export class  Dashboard {
-  colProduct: {id :string, name : string, display: boolean}[];
+import {Product} from "../product/product";
+
+export interface ProductId extends Product { id: string; }
+
+export class  DashboardClient {
+  colProduct: {product: ProductId, display: boolean}[];
+  row: {id :string, name : string, numeroDelivery: number, display: boolean, quantity:number[], price:number[]}[];
+  sum: {display: boolean, quantity:number}[];
+}
+
+export class  DashboardProducer {
+  colProduct: {product: Product, display: boolean}[];
   row: {id :string, name : string, display: boolean, quantity:number[]}[];
   sum: {display: boolean, quantity:number}[];
-  //rowProducer: {id :string, name : string, display: boolean, quantity:number[]}[];
-  //rowClient: {id :string, name : string, display: boolean}[];
-  //rowProducer: {id :string, name : string, display: boolean}[];
-  //datas: {clients : {id: string, name: string, products: {id: string, name: string, quantity:number}[]}[],
-  //        producers : {id: string, name: string, products: {id: string, name: string, quantity:number}[]}[]}
 }

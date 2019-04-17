@@ -8,6 +8,7 @@ import { ActivatedRoute } from '@angular/router';
 import { Validators, FormGroup, FormControl, FormBuilder, FormArray  } from '@angular/forms';
 import {MatDialog, MatDialogRef, MAT_DIALOG_DATA} from '@angular/material';
 import {Subscription} from "rxjs/index";
+import {ProgressSpinnerDialogComponent} from '../../progress-spinner-dialog/progress-spinner-dialog.component';
 
 export interface DialogDetailEmployeData {
   message: string;
@@ -25,7 +26,7 @@ export class DetailEmployeComponent implements OnInit, OnDestroy {
   private employeDoc: AngularFirestoreDocument<Employe>;
   private employe: Observable<Employe>;
   private employeSubscription : Subscription;
-  private detailEmployeForm;
+  detailEmployeForm;
 
   constructor(private router: Router, private route: ActivatedRoute, private db: AngularFirestore, private fb: FormBuilder, private dialog: MatDialog) {
   }
@@ -42,8 +43,13 @@ export class DetailEmployeComponent implements OnInit, OnDestroy {
 
   updateEmploye() {
     console.warn(this.detailEmployeForm.value);
+    const progressSpinnerDialogRef = this.dialog.open(ProgressSpinnerDialogComponent, {
+      panelClass: 'transparent',
+      disableClose: true
+    });
     this.employeDoc = this.db.doc<Employe>('employes/' + this.employeId );
     this.employeDoc.update(this.detailEmployeForm.value).then(data => {
+      progressSpinnerDialogRef.close();
       this.openDialogUpdate("L'employé "+this.employeId+" a été mis à jour.")});
   }
 
@@ -54,8 +60,13 @@ export class DetailEmployeComponent implements OnInit, OnDestroy {
 
   deleteEmploye() {
     console.warn("deleteEmploye"+this.employeId);
+    const progressSpinnerDialogRef = this.dialog.open(ProgressSpinnerDialogComponent, {
+      panelClass: 'transparent',
+      disableClose: true
+    });
     this.employeDoc = this.db.doc<Employe>('employes/' + this.employeId );
     this.employeDoc.delete().then(data => {
+      progressSpinnerDialogRef.close();
       this.openDialogDelete("L'employé "+this.employeId+" a été supprimé.")});
   }
 
@@ -119,6 +130,7 @@ export class DetailEmployeComponent implements OnInit, OnDestroy {
 
     dialogRef.afterClosed().subscribe(result => {
       console.log('The dialog was closed');
+      this.router.navigate(['list-employes/']);
     });
   }
 

@@ -33,12 +33,17 @@ export class PdfService {
       fileName:'bon-livraison'
     };
 
+    var country;
+    (client.country!="France" && client.country!="france")? country = client.country : country = "";
     var clientStack = [ // les infos clients en en-tête (nom, adresse, contac../
       'Entreprise ' + client.name,
-      client.contacts[0].contactName,
-      client.contacts[0].contactEmail,
-      client.contacts[0].contactCellPhone,
-      client.contacts[0].contactPhone,
+      client.address,
+      client.zipcode+ ' '+ client.town,
+      country
+     // client.contacts[0].contactName,
+     // client.contacts[0].contactEmail,
+     // client.contacts[0].contactCellPhone,
+     // client.contacts[0].contactPhone,
     ];
 
     // tableau des produits
@@ -48,7 +53,7 @@ export class PdfService {
 
     for (var i = 0; i < products.length; i++) {
       let productRow=[];
-      if (products[i].quantity!=null && products[i].price!=null && products[i].display) {
+      if (products[i].quantity!=null && products[i].price!=null && products[i].price>0 && products[i].display) {
         productRow.push(products[i].product.name, {text: products[i].quantity, alignment:'center'},
           {text: this.formatToTwoDecimal(products[i].product.weight)+'kg', alignment:'center'},
           {text: this.formatToTwoDecimal(products[i].quantity*products[i].product.weight)+'kg', alignment:'center'},
@@ -56,23 +61,45 @@ export class PdfService {
           {text: this.formatToTwoDecimal(products[i].quantity*products[i].product.weight*products[i].price)+'€', alignment:'right'});
         tableProducts.push(productRow);
       }
+      else if (products[i].quantity!=null && (products[i].price==null || products[i].price==0) && products[i].display) {
+        productRow.push(products[i].product.name, {text: products[i].quantity, alignment:'center'},
+          {text: this.formatToTwoDecimal(products[i].product.weight)+'kg', alignment:'center'},
+          {text: this.formatToTwoDecimal(products[i].quantity*products[i].product.weight)+'kg', alignment:'center'},
+          {text: ''},
+          {text: ''});
+        tableProducts.push(productRow);
+      }
     }
-  /*
-    tableProducts.push([null, null, null, null, null, null]);
-    tableProducts.push([{text:'Total HT', bold:'true'}, null, null, null, null, {text:this.formatToTwoDecimal(totalPrice) + '€', bold:'true', alignment:'right'} ]);
-    tableProducts.push([{text:'TVA à '+tva+'%', bold:'true'}, null, null, null, null, {text:this.formatToTwoDecimal(totalPrice*tva/100) + '€', bold:'true', alignment:'right'}]);
-    tableProducts.push([{text:'Total TTC', bold:'true'}, null, null, null, null, {text:this.formatToTwoDecimal(totalPrice + totalPrice*tva/100) + '€', bold:'true', alignment:'right'}]);
-*/
 
-    var totalPricesTableBody = [
-      [{text:'TOTAL PRODUITS HT', bold:'true'}, {text:this.formatToTwoDecimal(totalPrice) + '€', bold:'true', alignment:'right'} ],
-      [{text:'TVA à '+tva+'%', bold:'true'}, {text:this.formatToTwoDecimal(totalPrice*tva/100) + '€', bold:'true', alignment:'right'}],
-      [{text:'TOTAL TTC', bold:'true'}, {text:this.formatToTwoDecimal(totalPrice + totalPrice*tva/100) + '€', bold:'true', alignment:'right'}]
+    var totalPricesTableBody = [];
+    if (totalPrice!=undefined  && totalPrice!=null && totalPrice>0) {
+      totalPricesTableBody = [
+        [{text:'TOTAL PRODUITS HT', bold:'true'}, {text:this.formatToTwoDecimal(totalPrice) + '€', bold:'true', alignment:'right'} ],
+        [{text:'TVA à '+tva+'%', bold:'true'}, {text:this.formatToTwoDecimal(totalPrice*tva/100) + '€', bold:'true', alignment:'right'}],
+        [{text:'TOTAL TTC', bold:'true'}, {text:this.formatToTwoDecimal(totalPrice + totalPrice*tva/100) + '€', bold:'true', alignment:'right'}]
       ];
+    }
+    else {
+      totalPricesTableBody = [
+        ['',''],
+        ['',''],
+        ['','']
+      ];
+    }
 
+/*
     var conditionsStack = [
+      {	table: {
+        widths: ['*', 80, 120],
+        heights: [14, 70],
+        body: [
+          ['Observations ou réserve', 'date', 'Nom du signataire et Signature'],
+          ['', '', '']
+        ]
+      }, margin: [0,14]},
       'CLAUSE DE RESERVE DE PROPRIETE : En application de la Loi 80-335 du 12 mai 1980, les marchandises restent la propriété du vendeur jusqu\'au paiement intégral de leur prix. Les risques afférents aux dites marchandises sont transférés à l\'achetur dès la livraison.',
     ];
+    */
 
     var docDefinition = {
       // a string or { width: number, height: number }
@@ -83,7 +110,7 @@ export class PdfService {
 
       // [left, top, right, bottom] or [horizontal, vertical] or just a number for equal margins
       // margins are set in point that is 1/2.54*72 cm, soit env 28.35 équivaut à 1cm
-      pageMargins: [ 56, 150, 56, 100],
+      pageMargins: [ 42, 150, 42, 300],
 
       info: {
         title: metaDatas.title+'-'+client.name.split('.').join("")+'-'+numeroDelivery,
@@ -92,14 +119,56 @@ export class PdfService {
 
       header:     [
         {
-          image: staticsPhotos.logo,
-          width: 150,
-          alignment : 'center',
-          margin: [0, 14, 0, 0]
-        },
+          columns: [
+            {
+              stack: [
+                {text:'GIE des Producteurs de Fruits Rouges des Monts du Velay',
+                  bold:true},
+                'Pouzols, 43200 SAINT-JEURES',
+                'Tel: 04 71 59 61 91 - Port: 06 03 32 51 88 - Fax: 04 71 65 90 80',
+                'Mail: contact@giefruitsrouges.fr',
+              ],
+              alignment: 'left',
+              margin: [0, 14, 0, 0],
+              width: '*'
+            },
+            {
+              image: staticsPhotos.logo,
+              width: 150,
+              alignment: 'center',
+              margin: [0, 0, 42, 0]
+            },
+          ],
+          margin: [42, 28, 0, 42]
+        }
       ],
 
       footer: [
+          {
+          stack: [
+            {	table: {
+              widths: ['*', 80, 120],
+              heights: [14, 70],
+              body: [
+                ['Observations ou réserve', 'date', 'Nom du signataire et Signature'],
+                ['', '', '']
+              ]
+            }, margin: [0,14]},
+            {stack: ['CLAUSE DE RESERVE DE PROPRIETE : En application de la Loi 80-335 du 12 mai 1980, les marchandises restent la propriété du vendeur jusqu\'au paiement intégral de leur prix.',
+              'Les risques afférents aux dites marchandises sont transférés à l\'acheteur dès la livraison.'],
+              margin: [0,7,0,42],
+              fontSize : 8,
+              alignment:'left',
+              italics :true},
+            'GIE des Producteurs de Fruits Rouges des Monts du Velay',
+            'Pouzols, 43200 SAINT-JEURES',
+            'Tel: 04 71 59 61 91 - Port: 06 03 32 51 88 - Fax: 04 71 65 90 80 - Mail: contact@giefruitsrouges.fr',
+            'SIRET: 412 119 588 000 25 - TVAI: FR74 412 119 588'
+          ],
+          fontSize: 10,
+          alignment: 'center',
+          margin: [42, 0, 42, 0]
+        },
         {
           text: "fruitsrougesduvelay.com",
           link: "https://fruitsrougesduvelay.com/",
@@ -109,36 +178,24 @@ export class PdfService {
           alignment: "center",
           margin: [0,0,0,8]
         },
-        {
-          stack: [
-            'GIE FRUITS ROUGES MONT VELAY',
-            'Pouzols, 43200 SAINT-JEURES',
-            'Tel: +33 (0)4 71 59 61 91 - Port: +33 (0)6 03 32 51 88 - Fax: +33 (0)4 71 65 90 80',
-            'Mail: contact@giefruitsrouges.fr',
-            'SIRET: 41211958800025 - TVAI: FR61492764543'
-          ],
-          fontSize: 10,
-          alignment: 'center',
-          margin: [0, 0, 0, 0]
-        }
       ],
 
       content: [
         {
-          text: "BON DE LIVRAISON N°"+ numeroDelivery,
-          fontSize: 14,
+          text: "Bon de livraison n°"+ numeroDelivery,
+          fontSize: 12,
           bold:true,
-          color: "#abd500",
-          margin: [0,0,0,14]
+          //color: "#abd500",
+          margin: [0,0,0,7]
+        },
+        {
+          text: 'Saint-Jeures, le '+ this.tolocaleDateString(dashboardDate),
+         // margin : [0,0,0,28]
         },
         {
           stack : clientStack,
           bold: true,
-          margin: [300,0,0,7]
-        },
-        {
-          text: 'Saint-Jeures, le '+ this.tolocaleDateString(dashboardDate),
-          margin : [0,0,0,14]
+          margin: [300,0,0,28]
         },
 
         {table: {
@@ -163,11 +220,13 @@ export class PdfService {
           margin: [300,0,0,28],
           alignment: 'left',
         },
+        /*
         {
           stack : conditionsStack,
           fontSize: 10,
           margin: [0,0,0,0]
         }
+        */
       ],
       defaultStyle: {
         font: 'Roboto',
@@ -209,9 +268,10 @@ export class PdfService {
   getTotalProductsPrice(products) {
     var price:number = 0;
     for (var i = 0; i < products.length; i++) {
-      if (products[i].quantity != null && products[i].product.weight != null && products[i].price != null && products[i].display) {
+      if (products[i].quantity != null && products[i].product.weight != null && products[i].price != null && products[i].price>0 && products[i].display) {
         price += products[i].quantity * products[i].product.weight * products[i].price;
       }
+      else if (products[i].quantity != null && products[i].product.weight != null && (products[i].price == null || products[i].price ==0) && products[i].display) {return 0}
       console.log("price : ", price);
     }
     return price

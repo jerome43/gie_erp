@@ -8,6 +8,7 @@ import { ActivatedRoute } from '@angular/router';
 import { Validators, FormGroup, FormControl, FormBuilder, FormArray  } from '@angular/forms';
 import {MatDialog, MatDialogRef, MAT_DIALOG_DATA} from '@angular/material';
 import {Subscription} from "rxjs/index";
+import {ProgressSpinnerDialogComponent} from '../../progress-spinner-dialog/progress-spinner-dialog.component';
 
 export interface DialogDetailClientData {
   message: string;
@@ -25,8 +26,8 @@ export class DetailClientComponent implements OnInit, OnDestroy {
   private clientDoc: AngularFirestoreDocument<Client>;
   private client: Observable<Client>;
   private clientSubscription : Subscription;
-  private inputContactNotEmpty=[];
-  private detailClientForm;
+  inputContactNotEmpty=[];
+  detailClientForm;
 
   constructor(private router: Router, private route: ActivatedRoute, private db: AngularFirestore, private fb: FormBuilder, private dialog: MatDialog) {
   }
@@ -43,9 +44,14 @@ export class DetailClientComponent implements OnInit, OnDestroy {
 
   updateClient() {
     console.warn(this.detailClientForm.value);
+    const progressSpinnerDialogRef = this.dialog.open(ProgressSpinnerDialogComponent, {
+      panelClass: 'transparent',
+      disableClose: true
+    });
     this.clientDoc = this.db.doc<Client>('clients/' + this.clientId );
     //this.clientDoc.update(this.detailClientForm.value);
     this.clientDoc.update(this.detailClientForm.value).then(data => {
+      progressSpinnerDialogRef.close();
       this.openDialogUpdate("Le client "+this.clientId+" a été mis à jour.")});
   }
 
@@ -56,8 +62,13 @@ export class DetailClientComponent implements OnInit, OnDestroy {
 
   deleteClient() {
     console.warn("deleteClient"+this.clientId);
+    const progressSpinnerDialogRef = this.dialog.open(ProgressSpinnerDialogComponent, {
+      panelClass: 'transparent',
+      disableClose: true
+    });
     this.clientDoc = this.db.doc<Client>('clients/' + this.clientId );
     this.clientDoc.delete().then(data => {
+      progressSpinnerDialogRef.close();
       this.openDialogDelete("Le client "+this.clientId+" a été supprimé.")});
   }
 
@@ -119,15 +130,6 @@ export class DetailClientComponent implements OnInit, OnDestroy {
   }
 
   get name() { return this.detailClientForm.get('name'); }
-  /*
-  get email() { return this.detailClientForm.get('email'); }
-
-  getEmailErrorMessage() {
-    return this.email.hasError('required') ? 'Vous devez renseigner l\'émail' :
-      this.email.hasError('email') ? 'L\'émail semble incorrect' :
-        '';
-  }
-  */
 
   initForm() {
     this.inputContactNotEmpty=[];
@@ -148,9 +150,8 @@ export class DetailClientComponent implements OnInit, OnDestroy {
           contactEmail: ['', [Validators.email]]})
       ]),
       comment: [''],
-      //discount: ['0'],
-      //maintenance: ['false'],
-      date: ['']
+      date: [''],
+      active: [''],
     });
 
     this.detailClientForm.valueChanges.subscribe(data => {
@@ -177,6 +178,7 @@ export class DetailClientComponent implements OnInit, OnDestroy {
 
     dialogRef.afterClosed().subscribe(result => {
       console.log('The dialog was closed');
+      this.router.navigate(['list-clients/']);
     });
   }
 

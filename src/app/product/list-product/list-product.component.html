@@ -5,12 +5,33 @@
     <input matInput (keyup)="applyFilter($event.target.value)" placeholder="Rechercher">
   </mat-form-field>
 
-  <table mat-table [dataSource]="dataSource" matSort matSortActive="name" matSortDirection="asc" matSortDisableClear class="mat-elevation-z8">
+  <table mat-table [dataSource]="dataSource" matSort matSortActive="sortIndex" matSortDirection="asc" matSortDisableClear="true" class="mat-elevation-z8">
+
+    <!-- Clé de tri Column -->
+    <ng-container matColumnDef="sortIndex">
+      <th mat-header-cell *matHeaderCellDef mat-sort-header> Clé de tri </th>
+      <td mat-cell *matCellDef="let element"> {{element.sortIndex}} </td>
+    </ng-container>
+
+    <!-- Ref Column -->
+    <ng-container matColumnDef="reference">
+      <th mat-header-cell *matHeaderCellDef mat-sort-header> Référence </th>
+      <td mat-cell *matCellDef="let element"> {{element.reference}} </td>
+    </ng-container>
 
     <!-- Name Column -->
     <ng-container matColumnDef="name">
       <th mat-header-cell *matHeaderCellDef mat-sort-header> Nom </th>
       <td mat-cell *matCellDef="let element"> {{element.name}} </td>
+    </ng-container>
+
+    <!-- Active Column -->
+    <ng-container matColumnDef="active">
+      <th mat-header-cell *matHeaderCellDef mat-sort-header> Produit activé </th>
+      <td mat-cell *matCellDef="let element">
+        <span *ngIf="element.active=='true'">oui</span>
+        <span *ngIf="element.active=='false'">non</span>
+      </td>
     </ng-container>
 
     <!-- Date Column -->

@@ -4,6 +4,7 @@ import { AngularFirestore, AngularFirestoreCollection } from '@angular/fire/fire
 import { Observable } from 'rxjs';
 import { Validators, FormGroup, FormControl, FormBuilder, FormArray } from '@angular/forms';
 import {MatDialog, MatDialogRef, MAT_DIALOG_DATA} from '@angular/material';
+import {ProgressSpinnerDialogComponent} from '../../progress-spinner-dialog/progress-spinner-dialog.component';
 
 export interface DialogCreateClientData {
   id: string;
@@ -17,7 +18,7 @@ export interface DialogCreateClientData {
 
 export class CreateClientComponent implements OnInit {
 
-  private createClientForm;
+  createClientForm;
   private clientsCollection: AngularFirestoreCollection<Client>;
 
   constructor(db: AngularFirestore, private fb: FormBuilder, private dialog: MatDialog) {
@@ -29,8 +30,10 @@ export class CreateClientComponent implements OnInit {
   }
 
   addClient() {
+    const progressSpinnerDialogRef = this.dialog.open(ProgressSpinnerDialogComponent, {panelClass: 'transparent',disableClose: true});
     this.clientsCollection.add(this.createClientForm.value).then(data => {
       console.log("Document written with ID: ", data.id);
+      progressSpinnerDialogRef.close();
       this.openDialog(data.id)});
   }
 
@@ -54,15 +57,6 @@ export class CreateClientComponent implements OnInit {
   }
 
   get name() { return this.createClientForm.get('name'); }
-  /*
-  get email() { return this.createClientForm.get('email'); }
-  getEmailErrorMessage() {
-    return this.email.hasError('required') ? 'Vous devez renseigner l\'émail' :
-      this.email.hasError('email') ? 'L\'émail semble incorrect' :
-        '';
-  }
-  */
-
 
   openDialog(id): void {
     const dialogRef = this.dialog.open(DialogCreateClientOverview, {
@@ -94,15 +88,15 @@ export class CreateClientComponent implements OnInit {
           contactEmail: ['', [Validators.email]]})
       ]),
       comment: [''],
-      //discount: ['0'],
-      //maintenance: ['false'],
-      date: [new Date()]
+      date: [new Date()],
+       active: ["false"],
     });
     this.createClientForm.valueChanges.subscribe(data => {
       console.log('Form changes', data);
     });
   }
 
+  /*
   importClients() {
     var clients = [
       {"id":"1","nom":"Auvergne Provence","adresse":null,"code_postal":null,"ville":null,"telephone":"06 11 95 22 83","email":null,"date_add":"2018-04-02 00:00:00"},
@@ -139,11 +133,12 @@ export class CreateClientComponent implements OnInit {
     clients.forEach(function (clientImport) {
       clientImport.telephone!=null ? telephone=clientImport.telephone : telephone='';
 
-      var client: Client = {name : clientImport.nom, address : '', zipcode : 0, town: '', country: 'France', phone : telephone, contacts: [{contactName : '', contactFunction: '', contactPhone: '', contactCellPhone: '', contactEmail : 'contact@contact.com'}], comment: '', date : date};
+      var client: Client = {name : clientImport.nom, address : '', zipcode : 0, town: '', country: 'France', phone : telephone, contacts: [{contactName : '', contactFunction: '', contactPhone: '', contactCellPhone: '', contactEmail : 'contact@contact.com'}], comment: '', date : date, active:'false'};
       this.clientsCollection.add(client).then(data => {
         console.log("Document written with ID: ", data.id)});
     }, this)
   };
+  */
 
 }
 

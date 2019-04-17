@@ -8,6 +8,7 @@ import { Product } from '../product';
 import { Router } from '@angular/router';
 import {MatDialog, MatDialogRef, MAT_DIALOG_DATA} from '@angular/material';
 import {Subscription} from "rxjs/index";
+import {ProgressSpinnerDialogComponent} from '../../progress-spinner-dialog/progress-spinner-dialog.component';
 
 export interface DialogListProductData { message: string; displayNoButton:boolean }
 export interface ProductId extends Product { id: string; }
@@ -19,10 +20,10 @@ export interface ProductId extends Product { id: string; }
 })
 
 export class ListProductComponent implements OnInit, OnDestroy {
-  fbProducts: Observable<ProductId[]>; // produtcs on Firebase
-  fbProductsSubscription : Subscription;
-  displayedColumns: string[] = ['name', 'date', 'edit', 'delete', 'id']; // colones affichées par le tableau
-  productsData : Array<any>; // tableau qui va récupérer les données adéquates de fbProducts pour être ensuite affectées au tableau de sources de données
+  private fbProducts: Observable<ProductId[]>; // produtcs on Firebase
+  private fbProductsSubscription : Subscription;
+  displayedColumns: string[] = ['sortIndex', 'reference', 'name', 'active', 'date', 'edit', 'delete', 'id']; // colones affichées par le tableau
+  private productsData : Array<any>; // tableau qui va récupérer les données adéquates de fbProducts pour être ensuite affectées au tableau de sources de données
   dataSource : MatTableDataSource<ProductId>; // source de données du tableau
 
   @ViewChild(MatPaginator) paginator: MatPaginator; // pagination du tableau
@@ -50,14 +51,17 @@ export class ListProductComponent implements OnInit, OnDestroy {
       console.log('Current products: ', products);
       this.productsData = [];
       products.forEach((product)=>{
+        const reference = product.internal_number;
         const id = product.id;
         const name = product.name;
+        const sortIndex = product.sortIndex;
         const date = product.date;
-        this.productsData.push({id, name, date});
+        const active = product.active;
+        this.productsData.push({id:id, reference:reference, name:name, sortIndex:sortIndex, active:active, date:date});
       });
       this.dataSource = new MatTableDataSource<ProductId>(this.productsData);
       this.dataSource.paginator = this.paginator; // pagination du tableau
-      //this.sort.sort(<MatSortable>({id: 'name', start: 'desc'})); //  pour trier sur les noms par ordre alphabétique
+      //this.sort.sort(<MatSortable>({id: 'reference', start: 'asc'})); //  pour trier sur les noms par ordre alphabétique
       this.dataSource.sort = this.sort; // tri sur le tableau
     });
   }
@@ -85,24 +89,16 @@ export class ListProductComponent implements OnInit, OnDestroy {
     });
 
     dialogRef.afterClosed().subscribe(result => {
-      console.log('The dialog was closed'+result);
+      console.log('The dialog was closed : '+result);
       if (result=='yes') {
         this.deleteProduct(id);
       }
     });
   }
 
-
-  deleteProductOld(eventTargetId) {
-    console.log("deleteProduct"+eventTargetId);
-    this.productsData = [];
-    this.db.doc("products/"+eventTargetId).delete().then(data => {
-      this.openDialogDelete("Le produit "+eventTargetId+" a été supprimé.")
-    });
-  }
-
   deleteProduct(eventTargetId) { // pour supprimer le produit dans firebase
     console.warn("deleteProduct : "+eventTargetId);
+    const progressSpinnerDialogRef = this.dialog.open(ProgressSpinnerDialogComponent, {panelClass: 'transparent',disableClose: true});
     const productDoc: AngularFirestoreDocument<Product> = this.db.doc<Product>('products/' + eventTargetId );
     // supression de la photo associée au produit dans firestorage
     productDoc.ref.get().then((product)=>{
@@ -110,12 +106,35 @@ export class ListProductComponent implements OnInit, OnDestroy {
         // si la photo == null, undefined, "" ou 0, renvoie false, sinon true
         console.log("product.photo :"+product.data().photo);
         if (product.data().photo) {this.storage.ref(product.data().photo).delete();} // suppression de la photo associée au produit si elle existe
-        this.productsData = []; // on vide au préalable le tableau sinon les documents vont se surajouter aux anciens
-        // supression du produit dans firestore
-        productDoc.delete().then(data => {
-          this.openDialogDelete("Le produit "+eventTargetId+" a été supprimé.")});
+
+        var productSortLastIndexRef = this.db.collection('parameters').doc('productSort').ref;
+
+        return this.db.firestore.runTransaction((transaction)=> {
+          return transaction.get(productSortLastIndexRef).then((productSortLastIndex)=> {
+            if (!productSortLastIndex.exists) {
+              throw "Document does not exist!";
+            }
+            var newProductSortLastIndex = productSortLastIndex.data().lastIndex - 1;
+            transaction.update(productSortLastIndexRef, { lastIndex: newProductSortLastIndex });
+            transaction.delete(productDoc.ref);  // supression du produit dans firestore
+            for (var i=0; i<this.productsData.length; i++) { // mise à jour du nouvel index de tri
+              if (this.productsData[i].sortIndex>product.data().sortIndex) {
+                var productRef = this.db.collection('products').doc(this.productsData[i].id).ref;
+                transaction.update(productRef, {sortIndex: this.productsData[i].sortIndex-1});
+              }
+            }
+          });
+        }).then(()=> {
+          progressSpinnerDialogRef.close();
+          this.openDialogDelete("Le produit "+eventTargetId+" a été supprimé.");
+          console.log("Transaction successfully committed!");
+        }).catch(function(error) {
+          console.log("Transaction failed: ", error);
+        });
+
       }
       else {
+        progressSpinnerDialogRef.close();
         console.log("product doesn't exists");
       }
     });

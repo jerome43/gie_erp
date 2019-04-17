@@ -7,6 +7,7 @@ import { Producer } from '../producer';
 import { Router } from '@angular/router';
 import {MatDialog, MatDialogRef, MAT_DIALOG_DATA} from '@angular/material';
 import {Subscription} from "rxjs/index";
+import {ProgressSpinnerDialogComponent} from '../../progress-spinner-dialog/progress-spinner-dialog.component';
 
 export interface DialogListProducerData { message: string; displayNoButton:boolean }
 export interface ProducerId extends Producer { id: string; }
@@ -20,9 +21,9 @@ export interface ProducerId extends Producer { id: string; }
 export class ListProducerComponent implements OnInit, OnDestroy {
   private fbProducers: Observable<ProducerId[]>; // producers on Firebase
   private fbProducersSubscription : Subscription;
-  private displayedColumns: string[] = ['name', 'date', 'edit', 'delete', 'id']; // colones affichées par le tableau
+  displayedColumns: string[] = ['name', 'active', 'date', 'edit', 'delete', 'id']; // colones affichées par le tableau
   private producersData : Array<any>; // tableau qui va récupérer les données adéquates de fbProducers pour être ensuite affectées au tableau de sources de données
-  private dataSource : MatTableDataSource<ProducerId>; // source de données du tableau
+  dataSource : MatTableDataSource<ProducerId>; // source de données du tableau
 
   @ViewChild(MatPaginator) paginator: MatPaginator; // pagination du tableau
   @ViewChild(MatSort) sort: MatSort; // tri sur le tableau
@@ -53,7 +54,8 @@ export class ListProducerComponent implements OnInit, OnDestroy {
           const id = producer.id;
           const name = producer.name;
           const date = producer.date;
-          this.producersData.push({id, name, date});
+          const active = producer.active;
+          this.producersData.push({id, name, date, active});
         });
         console.log("this.producersData : ", this.producersData);
         this.dataSource = new MatTableDataSource<ProducerId>(this.producersData);
@@ -96,8 +98,10 @@ export class ListProducerComponent implements OnInit, OnDestroy {
 
   deleteProducer(eventTargetId) {
     console.log("deleteProducer"+eventTargetId);
+    const progressSpinnerDialogRef = this.dialog.open(ProgressSpinnerDialogComponent, {panelClass: 'transparent',disableClose: true});
     this.producersData = [];
     this.db.doc("producers/"+eventTargetId).delete().then(data => {
+      progressSpinnerDialogRef.close();
       this.openDialogDelete("Le producteur "+eventTargetId+" a été supprimé.")
     });
   }

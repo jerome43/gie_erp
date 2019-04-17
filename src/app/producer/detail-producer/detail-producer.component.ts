@@ -8,6 +8,7 @@ import { ActivatedRoute } from '@angular/router';
 import { Validators, FormGroup, FormControl, FormBuilder, FormArray  } from '@angular/forms';
 import {MatDialog, MatDialogRef, MAT_DIALOG_DATA} from '@angular/material';
 import {Subscription} from "rxjs/index";
+import {ProgressSpinnerDialogComponent} from '../../progress-spinner-dialog/progress-spinner-dialog.component';
 
 export interface DialogDetailProducerData {
   message: string;
@@ -25,8 +26,8 @@ export class DetailProducerComponent implements OnInit, OnDestroy {
   private producerDoc: AngularFirestoreDocument<Producer>;
   private producer: Observable<Producer>;
   private producerSubscription : Subscription;
-  private inputContactNotEmpty=[];
-  private detailProducerForm;
+  inputContactNotEmpty=[];
+  detailProducerForm;
 
   constructor(private router: Router, private route: ActivatedRoute, private db: AngularFirestore, private fb: FormBuilder, private dialog: MatDialog) {
   }
@@ -43,9 +44,14 @@ export class DetailProducerComponent implements OnInit, OnDestroy {
 
   updateProducer() {
     console.warn(this.detailProducerForm.value);
+    const progressSpinnerDialogRef = this.dialog.open(ProgressSpinnerDialogComponent, {
+      panelClass: 'transparent',
+      disableClose: true
+    });
     this.producerDoc = this.db.doc<Producer>('producers/' + this.producerId );
     //this.producerDoc.update(this.detailProducerForm.value);
     this.producerDoc.update(this.detailProducerForm.value).then(data => {
+      progressSpinnerDialogRef.close();
       this.openDialogUpdate("Le producteur "+this.producerId+" a été mis à jour.")});
   }
 
@@ -56,8 +62,13 @@ export class DetailProducerComponent implements OnInit, OnDestroy {
 
   deleteProducer() {
     console.warn("deleteProducer"+this.producerId);
+    const progressSpinnerDialogRef = this.dialog.open(ProgressSpinnerDialogComponent, {
+      panelClass: 'transparent',
+      disableClose: true
+    });
     this.producerDoc = this.db.doc<Producer>('producers/' + this.producerId );
     this.producerDoc.delete().then(data => {
+      progressSpinnerDialogRef.close();
       this.openDialogDelete("Le producteur "+this.producerId+" a été supprimé.")});
   }
 
@@ -119,15 +130,6 @@ export class DetailProducerComponent implements OnInit, OnDestroy {
   }
 
   get name() { return this.detailProducerForm.get('name'); }
-  /*
-  get email() { return this.detailProducerForm.get('email'); }
-
-  getEmailErrorMessage() {
-    return this.email.hasError('required') ? 'Vous devez renseigner l\'émail' :
-      this.email.hasError('email') ? 'L\'émail semble incorrect' :
-        '';
-  }
-  */
 
   initForm() {
     this.inputContactNotEmpty=[];
@@ -138,7 +140,6 @@ export class DetailProducerComponent implements OnInit, OnDestroy {
       town: [''],
       country: ['France'],
       phone: [''],
-      //email: ['', [Validators.required, Validators.email]],
       contacts: this.fb.array([
         this.fb.group({
           contactName: [''],
@@ -148,9 +149,8 @@ export class DetailProducerComponent implements OnInit, OnDestroy {
           contactEmail: ['', [Validators.email]]})
       ]),
       comment: [''],
-      //discount: ['0'],
-      //maintenance: ['false'],
-      date: ['']
+      date: [''],
+      active: ['false'],
     });
 
     this.detailProducerForm.valueChanges.subscribe(data => {
@@ -177,6 +177,7 @@ export class DetailProducerComponent implements OnInit, OnDestroy {
 
     dialogRef.afterClosed().subscribe(result => {
       console.log('The dialog was closed');
+      this.router.navigate(['list-producers/']);
     });
   }
 

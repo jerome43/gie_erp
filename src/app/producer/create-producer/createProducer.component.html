@@ -3,8 +3,6 @@
   <mat-form-field>
     <input type="text" matInput formControlName="name" placeholder="Nom" required>
     <mat-error *ngIf="name.invalid">Veuillez renseigner le nom.</mat-error>
-    <!--mat-icon matSuffix>sentiment_very_satisfied</mat-icon>
-    <mat-hint>Requis</mat-hint-->
   </mat-form-field>
   <mat-form-field>
     <input type="text" matInput formControlName="address" placeholder="Adresse">
@@ -21,10 +19,6 @@
   <mat-form-field>
     <input type="tel" matInput formControlName="phone" placeholder="Téléphone">
   </mat-form-field>
-  <!--mat-form-field>
-    <input type="email" matInput formControlName="email" placeholder="Email" required>
-    <mat-error *ngIf="email.invalid">{{getEmailErrorMessage()}}</mat-error>
-  </mat-form-field-->
   <div formArrayName="contacts">
     <div *ngFor="let contact of contacts.controls; let i=index" class="form-array-container">
       <!-- The repeated alias template -->
@@ -53,25 +47,13 @@
   <mat-form-field>
     <input type="text" matInput formControlName="comment" placeholder="Commentaires">
   </mat-form-field>
-  <!--div>
-    <div class="display-inline-block width50">
-      <mat-form-field class="width50 margin-auto">
-        <input type="number" matInput formControlName="discount" placeholder="Remise">
-        <span matSuffix>%</span>
-      </mat-form-field>
-    </div>
-    <div class="display-inline-block width50 margin-auto">
-      <label>Contrat de maintenance : </label>
-      <mat-radio-group formControlName="maintenance">
-        <mat-radio-button value="true">Oui</mat-radio-button>
-        <mat-radio-button value="false">Non</mat-radio-button>
-      </mat-radio-group>
-    </div>
-  </div-->
-
-  <!--p>
-    Form Status: {{ createProducerForm.status }}
-  </p-->
+  <div class="margin-bottom-1">
+    <label>Actif</label>
+    <mat-radio-group formControlName="active">
+      <mat-radio-button value="true">Oui</mat-radio-button>
+      <mat-radio-button value="false" checked>Non</mat-radio-button>
+    </mat-radio-group>
+  </div>
 </form>
 <div class="button-container">
   <button mat-raised-button color="primary" type="button" (click)="addProducer()" [disabled]="!createProducerForm.valid">Enregistrer</button>

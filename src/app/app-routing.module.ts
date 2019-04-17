@@ -14,6 +14,8 @@ import {CreateEmployeComponent} from "./employe/create-employe/createEmploye.com
 import {ListEmployeComponent} from "./employe/list-employe/list-employe.component";
 import {DetailEmployeComponent} from "./employe/detail-employe/detail-employe.component";
 import {DashboardComponent} from "./dashboard/dashboard.component";
+import {ParametersComponent} from "./parameters/parameters.component";
+import {SortProductComponent} from "./product/sort-product/sort-product.component";
 
 const routes: Routes = [
   { path: '', canActivate: [AuthGuard], redirectTo: 'dashboard', pathMatch: 'full' },
@@ -30,6 +32,8 @@ const routes: Routes = [
   { path: 'create-employe', canActivate: [AuthGuard], component: CreateEmployeComponent},
   { path: 'list-employes', canActivate: [AuthGuard], component: ListEmployeComponent},
   { path: 'detail-employe/:employeId', canActivate: [AuthGuard], component: DetailEmployeComponent},
+  { path: 'parameters', canActivate: [AuthGuard], component: ParametersComponent},
+  { path: 'sort-products', canActivate: [AuthGuard], component: SortProductComponent},
 ];
 
 @NgModule({

@@ -1,4 +1,4 @@
-<header>
+<header class="sticky">
   <div class="connexion">
     <span>Hello {{ user.displayName}} !</span>
     <a href="#" title="déconnexion" (click)="logout()"><mat-icon>exit_to_app</mat-icon></a>
@@ -45,13 +45,15 @@
           <span>Export commandes</span>
         </a>
       </mat-menu-->
-      <button mat-button [matMenuTriggerFor]="dashboardMenu"><mat-icon>dashboard</mat-icon><span class="top-menu-item">Tableau de bord</span></button>
+      <button mat-button routerLink="/dashboard" routerLinkActive="active"><mat-icon>dashboard</mat-icon><span class="top-menu-item">Tableau de bord</span></button>
+
+      <!--button mat-button [matMenuTriggerFor]="dashboardMenu"><mat-icon>dashboard</mat-icon><span class="top-menu-item">Tableau de bord</span></button>
       <mat-menu #dashboardMenu="matMenu">
         <a mat-menu-item routerLink="/dashboard" routerLinkActive="active">
           <mat-icon>dashboard</mat-icon>
           <span>Tableau de bord</span>
         </a>
-      </mat-menu>
+      </mat-menu-->
 
       <button mat-button [matMenuTriggerFor]="clientMenu"><mat-icon>contact_mail</mat-icon><span class="top-menu-item">Clients</span></button>
       <mat-menu #clientMenu="matMenu">
@@ -87,6 +89,10 @@
             <mat-icon>sort</mat-icon>
             <span>Liste produits</span>
           </a>
+        <a mat-menu-item routerLink="/sort-products" routerLinkActive="active">
+          <mat-icon>format_list_numbered</mat-icon>
+          <span>Classer les produits</span>
+        </a>
         <!--a mat-menu-item routerLink="/stock" routerLinkActive="active">
           <mat-icon>compare_arrows</mat-icon>
           <span>Stocks</span>
@@ -101,6 +107,10 @@
         <a mat-menu-item routerLink="/list-employes" routerLinkActive="active">
           <mat-icon>sort</mat-icon><mat-icon>people_outline</mat-icon>
           <span>Liste employé</span>
+        </a>
+        <a mat-menu-item routerLink="/parameters" routerLinkActive="active">
+          <mat-icon>build</mat-icon>
+          <span>Paramètres généraux (TVA...)</span>
         </a>
       </mat-menu>
     </div>

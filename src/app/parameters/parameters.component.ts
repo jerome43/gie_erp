@@ -8,7 +8,7 @@ import { AngularFirestore, AngularFirestoreCollection, AngularFirestoreDocument 
 })
 export class ParametersComponent implements OnInit {
 
-  private tva:number = 5.5; // taux par défaut
+  tva:number = 5.5; // taux par défaut
   constructor(private db: AngularFirestore) { }
 
   ngOnInit() {

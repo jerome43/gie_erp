@@ -7,10 +7,8 @@ export class Client {
   town: string;
   country: string;
   phone: string;
-  //email: string;
   contacts: [Contact];
   comment: string;
-  //discount: number;
-  //maintenance:boolean;
   date: Date;
+  active:string;
 }

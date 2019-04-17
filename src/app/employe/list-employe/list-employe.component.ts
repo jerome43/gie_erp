@@ -7,6 +7,7 @@ import { Employe } from '../employe';
 import { Router } from '@angular/router';
 import {MatDialog, MatDialogRef, MAT_DIALOG_DATA} from '@angular/material';
 import {Subscription} from "rxjs/index";
+import {ProgressSpinnerDialogComponent} from '../../progress-spinner-dialog/progress-spinner-dialog.component';
 
 export interface DialogListEmployeData { message: string; displayNoButton:boolean }
 export interface EmployeId extends Employe { id: string; }
@@ -20,9 +21,9 @@ export interface EmployeId extends Employe { id: string; }
 export class ListEmployeComponent implements OnInit, OnDestroy {
   private fbEmployes: Observable<EmployeId[]>; // employes on Firebase
   private fbEmployesSubscription : Subscription;
-  private displayedColumns: string[] = ['name', 'date', 'edit', 'delete', 'id']; // colones affichées par le tableau
+  displayedColumns: string[] = ['name', 'date', 'edit', 'delete', 'id']; // colones affichées par le tableau
   private employesData : Array<any>; // tableau qui va récupérer les données adéquates de fbEmployes pour être ensuite affectées au tableau de sources de données
-  private dataSource : MatTableDataSource<EmployeId>; // source de données du tableau
+  dataSource : MatTableDataSource<EmployeId>; // source de données du tableau
 
   @ViewChild(MatPaginator) paginator: MatPaginator; // pagination du tableau
   @ViewChild(MatSort) sort: MatSort; // tri sur le tableau
@@ -96,8 +97,10 @@ export class ListEmployeComponent implements OnInit, OnDestroy {
 
   deleteEmploye(eventTargetId) {
     console.log("deleteEmploye"+eventTargetId);
+    const progressSpinnerDialogRef = this.dialog.open(ProgressSpinnerDialogComponent, {panelClass: 'transparent',disableClose: true});
     this.employesData = [];
     this.db.doc("employes/"+eventTargetId).delete().then(data => {
+      progressSpinnerDialogRef.close();
       this.openDialogDelete("L'employe "+eventTargetId+" a été supprimé.")
     });
   }
